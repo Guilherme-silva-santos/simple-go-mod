@@ -4,7 +4,9 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/guilherme-silva-santos/simple-go-mod/config"
+	"github.com/guilherme-silva-santos/simple-go-mod/handlers"
 	"github.com/guilherme-silva-santos/simple-go-mod/models"
 )
 
@@ -25,11 +27,24 @@ func main() {
 	// e execute ela no banco de dados usando a conexão.
 	_, err := dbConnection.Exec(models.CreateTable)
 
+	defer dbConnection.Close()
 	if err != nil {
 		log.Fatal("Error creating table")
 	}
 
-	defer dbConnection.Close()
+	// end-points
+	router := mux.NewRouter()
 
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	// aqui estamos criando um end-point para o método GET
+	// passando para ele o path de task
+
+	taskHandler := handlers.NewTaskHandler(dbConnection)
+	// na rota de tasks ele vai a instacia de conexão com o banco
+	// passando o metodo de leitura de tasks
+	router.HandleFunc("/tasks", taskHandler.ReadTasks).Methods("GET")
+	router.HandleFunc("/tasks", taskHandler.CreateTasks).Methods("POST")
+	router.HandleFunc("/tasks/{id}", taskHandler.UpdateTasks).Methods("PUT")
+	router.HandleFunc("/tasks/{id}", taskHandler.DeleteTasks).Methods("DELETE")
+
+	log.Fatal(http.ListenAndServe(":8080", router))
 }
